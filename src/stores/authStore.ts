@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { User, Session } from '../types';
+import type { Session, User } from '../types';
 
 interface AuthState {
   currentUser: User | null;

@@ -1,6 +1,6 @@
 import React from 'react';
 import { X, Printer, Download } from 'lucide-react';
-import { Sale } from '../types';
+import type { Sale } from '../types';
 
 interface ReceiptModalProps {
   isOpen: boolean;

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { CartItem, Product } from '../types';
+import type { CartItem, Product } from '../types';
 import { useOfferStore } from './offerStore';
 import { useProductStore } from './productStore';
 

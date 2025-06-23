@@ -10,7 +10,7 @@ import {
   Eye
 } from 'lucide-react';
 import { useProductStore } from '../stores/productStore';
-import { Product } from '../types';
+import type { Product } from '../types';
 
 export const ProductManagement: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');

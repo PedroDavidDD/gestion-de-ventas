@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Sale, Refund, CartItem } from '../types';
+import type { Sale, Refund, CartItem } from '../types';
 
 interface SalesState {
   sales: Sale[];

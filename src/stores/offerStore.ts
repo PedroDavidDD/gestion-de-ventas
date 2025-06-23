@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Offer } from '../types';
+import type { Offer } from '../types';
 
 interface OfferState {
   offers: Offer[];

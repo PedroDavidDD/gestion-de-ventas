@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, Scan, Package, Plus, Minus } from 'lucide-react';
 import { useProductStore } from '../stores/productStore';
-import { Product } from '../types';
+import type { Product } from '../types';
 
 interface ProductSearchProps {
   onProductSelect: (product: Product, quantity?: number) => void;

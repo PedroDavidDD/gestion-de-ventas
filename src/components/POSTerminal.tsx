@@ -10,7 +10,7 @@ import { PaymentModal } from './PaymentModal';
 import { ReceiptModal } from './ReceiptModal';
 import { RefundModal } from './RefundModal';
 import { AdminPanel } from './AdminPanel';
-import { Product, Sale } from '../types';
+import type { Product, Sale } from '../types';
 
 interface POSTerminalProps {
   terminalId: string;

@@ -3,7 +3,7 @@ import { X, Search, RotateCcw, AlertTriangle } from 'lucide-react';
 import { useSalesStore } from '../stores/salesStore';
 import { useProductStore } from '../stores/productStore';
 import { useAuthStore } from '../stores/authStore';
-import { Sale, CartItem } from '../types';
+import type { Sale, CartItem } from '../types';
 
 interface RefundModalProps {
   isOpen: boolean;

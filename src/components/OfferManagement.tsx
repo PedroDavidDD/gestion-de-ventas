@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Plus, Edit, Trash2, Tag, Calendar, Package } from 'lucide-react';
 import { useOfferStore } from '../stores/offerStore';
 import { useProductStore } from '../stores/productStore';
-import { Offer } from '../types';
+import type { Offer } from '../types';
 
 export const OfferManagement: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
