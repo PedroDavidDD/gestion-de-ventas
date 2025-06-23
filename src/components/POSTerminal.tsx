@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LogOut, User, Monitor, CreditCard, Banknote, Settings, RotateCcw } from 'lucide-react';
+import { LogOut, User, Monitor, CreditCard, Settings, RotateCcw } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { useCartStore } from '../stores/cartStore';
 import { useProductStore } from '../stores/productStore';
@@ -110,11 +110,15 @@ export const POSTerminal: React.FC<POSTerminalProps> = ({ terminalId }) => {
     logout();
   };
 
+  const handleBackToMain = () => {
+    setShowAdminPanel(false);
+  };
+
   const total = getTotal();
 
   // Show admin panel if user is admin and admin panel is active
   if (showAdminPanel && currentUser?.role === 'admin') {
-    return <AdminPanel />;
+    return <AdminPanel onBackToMain={handleBackToMain} />;
   }
 
   return (

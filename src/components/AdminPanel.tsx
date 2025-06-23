@@ -3,38 +3,33 @@ import {
   Users, 
   Package, 
   Tag, 
-  BarChart3, 
-  Settings,
-  Plus,
-  Edit,
-  Trash2,
-  Eye,
-  EyeOff
+  ArrowLeft
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { useProductStore } from '../stores/productStore';
 import { useOfferStore } from '../stores/offerStore';
-import { useSalesStore } from '../stores/salesStore';
 import { ProductManagement } from './ProductManagement';
 import { OfferManagement } from './OfferManagement';
 import { UserManagement } from './UserManagement';
-import { SalesReports } from './SalesReports';
 
-type AdminTab = 'products' | 'offers' | 'users' | 'reports' | 'settings';
+type AdminTab = 'products' | 'offers' | 'users';
 
-export const AdminPanel: React.FC = () => {
+interface AdminPanelProps {
+  onBackToMain: () => void;
+}
+
+export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToMain }) => {
   const [activeTab, setActiveTab] = useState<AdminTab>('products');
   const { currentUser } = useAuthStore();
   const { products, getLowStockProducts } = useProductStore();
   const { offers, getActiveOffers } = useOfferStore();
-  const { sales, getTodaySales } = useSalesStore();
 
   if (currentUser?.role !== 'admin') {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
           <div className="text-red-500 mb-4">
-            <Settings className="h-12 w-12 mx-auto" />
+            <Package className="h-12 w-12 mx-auto" />
           </div>
           <h2 className="text-xl font-semibold text-gray-900 mb-2">
             Acceso Denegado
@@ -42,6 +37,12 @@ export const AdminPanel: React.FC = () => {
           <p className="text-gray-600">
             Solo los administradores pueden acceder a este panel.
           </p>
+          <button
+            onClick={onBackToMain}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+          >
+            Volver al Sistema
+          </button>
         </div>
       </div>
     );
@@ -49,7 +50,6 @@ export const AdminPanel: React.FC = () => {
 
   const lowStockProducts = getLowStockProducts();
   const activeOffers = getActiveOffers();
-  const todaySales = getTodaySales();
 
   const tabs = [
     {
@@ -70,17 +70,6 @@ export const AdminPanel: React.FC = () => {
       name: 'Usuarios',
       icon: Users,
       count: 3 // Mock count
-    },
-    {
-      id: 'reports' as AdminTab,
-      name: 'Reportes',
-      icon: BarChart3,
-      count: todaySales.length
-    },
-    {
-      id: 'settings' as AdminTab,
-      name: 'Configuración',
-      icon: Settings
     }
   ];
 
@@ -92,19 +81,6 @@ export const AdminPanel: React.FC = () => {
         return <OfferManagement />;
       case 'users':
         return <UserManagement />;
-      case 'reports':
-        return <SalesReports />;
-      case 'settings':
-        return (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Configuración del Sistema
-            </h3>
-            <p className="text-gray-600">
-              Panel de configuración en desarrollo...
-            </p>
-          </div>
-        );
       default:
         return null;
     }
@@ -117,7 +93,15 @@ export const AdminPanel: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
-              <Settings className="h-8 w-8 text-blue-600" />
+              <button
+                onClick={onBackToMain}
+                className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-200"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span>Volver al Sistema</span>
+              </button>
+              <div className="h-6 w-px bg-gray-300"></div>
+              <Package className="h-8 w-8 text-blue-600" />
               <div>
                 <h1 className="text-xl font-bold text-gray-900">Panel de Administración</h1>
                 <p className="text-sm text-gray-600">Gestión del Sistema POS</p>

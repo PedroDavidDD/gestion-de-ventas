@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { Product } from '../types';
 
 interface ProductState {
@@ -318,97 +319,104 @@ const mockProducts: Product[] = [
   }
 ];
 
-export const useProductStore = create<ProductState>((set, get) => ({
-  products: mockProducts,
-  categories: ['Bebidas', 'Lácteos', 'Abarrotes', 'Panadería', 'Snacks', 'Limpieza', 'Cuidado Personal', 'Conservas', 'Dulces'],
+export const useProductStore = create<ProductState>()(
+  persist(
+    (set, get) => ({
+      products: mockProducts,
+      categories: ['Bebidas', 'Lácteos', 'Abarrotes', 'Panadería', 'Snacks', 'Limpieza', 'Cuidado Personal', 'Conservas', 'Dulces'],
 
-  addProduct: (productData) => {
-    const newProduct: Product = {
-      ...productData,
-      id: Date.now().toString(),
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
+      addProduct: (productData) => {
+        const newProduct: Product = {
+          ...productData,
+          id: Date.now().toString(),
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
 
-    set(state => ({
-      products: [...state.products, newProduct],
-      categories: productData.category && !state.categories.includes(productData.category)
-        ? [...state.categories, productData.category]
-        : state.categories
-    }));
-  },
+        set(state => ({
+          products: [...state.products, newProduct],
+          categories: productData.category && !state.categories.includes(productData.category)
+            ? [...state.categories, productData.category]
+            : state.categories
+        }));
+      },
 
-  updateProduct: (id, updates) => {
-    set(state => ({
-      products: state.products.map(p => 
-        p.id === id 
-          ? { ...p, ...updates, updatedAt: new Date() }
-          : p
-      )
-    }));
-  },
+      updateProduct: (id, updates) => {
+        set(state => ({
+          products: state.products.map(p => 
+            p.id === id 
+              ? { ...p, ...updates, updatedAt: new Date() }
+              : p
+          )
+        }));
+      },
 
-  deleteProduct: (id) => {
-    set(state => ({
-      products: state.products.map(p => 
-        p.id === id 
-          ? { ...p, isActive: false, updatedAt: new Date() }
-          : p
-      )
-    }));
-  },
+      deleteProduct: (id) => {
+        set(state => ({
+          products: state.products.map(p => 
+            p.id === id 
+              ? { ...p, isActive: false, updatedAt: new Date() }
+              : p
+          )
+        }));
+      },
 
-  updatePrice: (id, newPrice) => {
-    get().updateProduct(id, { salePrice: newPrice });
-  },
+      updatePrice: (id, newPrice) => {
+        get().updateProduct(id, { salePrice: newPrice });
+      },
 
-  updateStock: (id, quantity) => {
-    set(state => ({
-      products: state.products.map(p => 
-        p.id === id 
-          ? { ...p, stock: Math.max(0, p.stock - quantity), updatedAt: new Date() }
-          : p
-      )
-    }));
-  },
+      updateStock: (id, quantity) => {
+        set(state => ({
+          products: state.products.map(p => 
+            p.id === id 
+              ? { ...p, stock: Math.max(0, p.stock - quantity), updatedAt: new Date() }
+              : p
+          )
+        }));
+      },
 
-  restoreStock: (id, quantity) => {
-    set(state => ({
-      products: state.products.map(p => 
-        p.id === id 
-          ? { ...p, stock: p.stock + quantity, updatedAt: new Date() }
-          : p
-      )
-    }));
-  },
+      restoreStock: (id, quantity) => {
+        set(state => ({
+          products: state.products.map(p => 
+            p.id === id 
+              ? { ...p, stock: p.stock + quantity, updatedAt: new Date() }
+              : p
+          )
+        }));
+      },
 
-  getProductByCode: (code) => {
-    return get().products.find(p => p.code === code && p.isActive);
-  },
+      getProductByCode: (code) => {
+        return get().products.find(p => p.code === code && p.isActive);
+      },
 
-  getProductByBarcode: (barcode) => {
-    return get().products.find(p => p.barcode === barcode && p.isActive);
-  },
+      getProductByBarcode: (barcode) => {
+        return get().products.find(p => p.barcode === barcode && p.isActive);
+      },
 
-  searchProducts: (query) => {
-    const products = get().products;
-    const lowercaseQuery = query.toLowerCase();
-    
-    return products.filter(p => 
-      p.isActive && (
-        p.code.toLowerCase().includes(lowercaseQuery) ||
-        p.description.toLowerCase().includes(lowercaseQuery) ||
-        p.barcode.includes(query) ||
-        p.category.toLowerCase().includes(lowercaseQuery)
-      )
-    );
-  },
+      searchProducts: (query) => {
+        const products = get().products;
+        const lowercaseQuery = query.toLowerCase();
+        
+        return products.filter(p => 
+          p.isActive && (
+            p.code.toLowerCase().includes(lowercaseQuery) ||
+            p.description.toLowerCase().includes(lowercaseQuery) ||
+            p.barcode.includes(query) ||
+            p.category.toLowerCase().includes(lowercaseQuery)
+          )
+        );
+      },
 
-  getProductsByCategory: (category) => {
-    return get().products.filter(p => p.category === category && p.isActive);
-  },
+      getProductsByCategory: (category) => {
+        return get().products.filter(p => p.category === category && p.isActive);
+      },
 
-  getLowStockProducts: (threshold = 10) => {
-    return get().products.filter(p => p.isActive && p.stock <= threshold);
-  }
-}));
+      getLowStockProducts: (threshold = 10) => {
+        return get().products.filter(p => p.isActive && p.stock <= threshold);
+      }
+    }),
+    {
+      name: 'product-storage'
+    }
+  )
+);

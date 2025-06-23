@@ -16,18 +16,18 @@ export const ProductSearch: React.FC<ProductSearchProps> = ({ onProductSelect })
   const [quantities, setQuantities] = useState<{[key: string]: number}>({});
   
   const inputRef = useRef<HTMLInputElement>(null);
-  const { searchProducts, getProductByCode, getProductByBarcode, getProductsByCategory, categories, products } = useProductStore();
+  const { searchProducts, getProductByCode, getProductByBarcode, getProductsByCategory, categories } = useProductStore();
 
   useEffect(() => {
     if (query.length >= 2) {
       const searchResults = searchProducts(query);
       setResults(searchResults);
-      setIsOpen(true);
+      setIsOpen(searchResults.length > 0);
       setSelectedIndex(-1);
     } else if (selectedCategory) {
       const categoryResults = getProductsByCategory(selectedCategory);
       setResults(categoryResults);
-      setIsOpen(true);
+      setIsOpen(categoryResults.length > 0);
       setSelectedIndex(-1);
     } else {
       setResults([]);
@@ -47,7 +47,16 @@ export const ProductSearch: React.FC<ProductSearchProps> = ({ onProductSelect })
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (!isOpen || results.length === 0) return;
+    if (!isOpen || results.length === 0) {
+      // Si no hay resultados y presiona Enter, buscar por código exacto
+      if (e.key === 'Enter' && query.trim()) {
+        const product = getProductByCode(query.trim()) || getProductByBarcode(query.trim());
+        if (product) {
+          selectProduct(product);
+        }
+      }
+      return;
+    }
 
     switch (e.key) {
       case 'ArrowDown':
@@ -64,13 +73,13 @@ export const ProductSearch: React.FC<ProductSearchProps> = ({ onProductSelect })
         break;
       case 'Enter':
         e.preventDefault();
-        if (selectedIndex >= 0) {
+        if (selectedIndex >= 0 && selectedIndex < results.length) {
           selectProduct(results[selectedIndex]);
         } else if (results.length === 1) {
           selectProduct(results[0]);
-        } else {
+        } else if (query.trim()) {
           // Try to find product by exact code or barcode
-          const product = getProductByCode(query) || getProductByBarcode(query);
+          const product = getProductByCode(query.trim()) || getProductByBarcode(query.trim());
           if (product) {
             selectProduct(product);
           }
@@ -90,6 +99,12 @@ export const ProductSearch: React.FC<ProductSearchProps> = ({ onProductSelect })
     setIsOpen(false);
     setSelectedIndex(-1);
     setSelectedCategory('');
+    // Clear quantity for this product
+    setQuantities(prev => {
+      const newQuantities = { ...prev };
+      delete newQuantities[product.id];
+      return newQuantities;
+    });
     inputRef.current?.focus();
   };
 
