@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { BarChart3, TrendingUp, DollarSign, Package, Calendar, Download } from 'lucide-react';
 import { useSalesStore } from '../stores/salesStore';
-import { useProductStore } from '../stores/productStore';
 
 export const SalesReports: React.FC = () => {
   const [dateRange, setDateRange] = useState({
@@ -9,8 +8,7 @@ export const SalesReports: React.FC = () => {
     end: new Date().toISOString().split('T')[0]
   });
 
-  const { sales, getTodaySales } = useSalesStore();
-  const { products } = useProductStore();
+  const { getTodaySales } = useSalesStore();
 
   const todaySales = getTodaySales();
   const todayRevenue = todaySales.reduce((sum, sale) => sum + sale.total, 0);

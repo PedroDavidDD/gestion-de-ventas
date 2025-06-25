@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { X, CreditCard, Banknote, Check } from 'lucide-react';
-import { useCartStore } from '../stores/cartStore';
 
 interface PaymentModalProps {
   isOpen: boolean;
