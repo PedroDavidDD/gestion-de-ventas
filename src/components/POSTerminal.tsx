@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { LogOut, User, Monitor, CreditCard, Settings, RotateCcw } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { useCartStore } from '../stores/cartStore';
 import { useProductStore } from '../stores/productStore';
@@ -56,7 +55,7 @@ export const POSTerminal: React.FC<POSTerminalProps> = ({ terminalId }) => {
     };
   }, [updateLastActivity, checkSessionTimeout]);
 
-  const handleProductSelect = (product: Product, quantity: number = 1) => {
+  const handleProductSelect = useCallback((product: Product, quantity: number = 1) => {
     if (product.stock <= 0) {
       alert('Producto sin stock disponible');
       return;
@@ -64,9 +63,9 @@ export const POSTerminal: React.FC<POSTerminalProps> = ({ terminalId }) => {
     
     addItem(product, quantity);
     updateLastActivity();
-  };
+  }, [addItem, updateLastActivity]);
 
-  const handleCheckout = () => {
+  const handleCheckout = useCallback(() => {
     if (items.length === 0) {
       alert('El carrito está vacío');
       return;
@@ -74,45 +73,70 @@ export const POSTerminal: React.FC<POSTerminalProps> = ({ terminalId }) => {
 
     setIsPaymentModalOpen(true);
     updateLastActivity();
-  };
+  }, [items.length, updateLastActivity]);
 
-  const handlePayment = (paymentMethod: 'cash' | 'card') => {
+  const handlePayment = useCallback((paymentMethod: 'cash' | 'card') => {
     if (!currentUser) return;
 
-    // Update product stock
-    items.forEach(item => {
-      updateStock(item.product.id, item.quantity);
-    });
+    try {
+      // Update product stock
+      items.forEach(item => {
+        updateStock(item.product.id, item.quantity);
+      });
 
-    // Complete sale
-    const sale = completeSale(
-      currentUser.id,
-      currentUser.name,
-      terminalId,
-      items,
-      paymentMethod,
-      sessionStartTime
-    );
+      // Complete sale
+      const sale = completeSale(
+        currentUser.id,
+        currentUser.name,
+        terminalId,
+        items,
+        paymentMethod,
+        sessionStartTime
+      );
 
-    setCurrentSale(sale);
-    setIsPaymentModalOpen(false);
-    setIsReceiptModalOpen(true);
-    clearCart();
-    updateLastActivity();
-  };
+      setCurrentSale(sale);
+      setIsPaymentModalOpen(false);
+      
+      // Clear cart and show receipt
+      clearCart();
+      
+      // Use setTimeout to ensure state updates are processed
+      setTimeout(() => {
+        setIsReceiptModalOpen(true);
+      }, 100);
+      
+      updateLastActivity();
+    } catch (error) {
+      console.error('Error processing payment:', error);
+      alert('Error al procesar el pago');
+    }
+  }, [currentUser, items, terminalId, sessionStartTime, updateStock, completeSale, clearCart, updateLastActivity]);
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     if (items.length > 0) {
       const confirmLogout = confirm('Hay productos en el carrito. ¿Estás seguro de cerrar sesión?');
       if (!confirmLogout) return;
     }
     
     logout();
-  };
+  }, [items.length, logout]);
 
-  const handleBackToMain = () => {
+  const handleBackToMain = useCallback(() => {
     setShowAdminPanel(false);
-  };
+  }, []);
+
+  const handleClosePaymentModal = useCallback(() => {
+    setIsPaymentModalOpen(false);
+  }, []);
+
+  const handleCloseReceiptModal = useCallback(() => {
+    setIsReceiptModalOpen(false);
+    setCurrentSale(null);
+  }, []);
+
+  const handleCloseRefundModal = useCallback(() => {
+    setIsRefundModalOpen(false);
+  }, []);
 
   const total = getTotal();
 
@@ -128,7 +152,9 @@ export const POSTerminal: React.FC<POSTerminalProps> = ({ terminalId }) => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
-              <Monitor className="h-8 w-8 text-blue-600" />
+              <svg className="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">Terminal {terminalId}</h1>
                 <p className="text-sm text-gray-600">Sistema POS</p>
@@ -137,7 +163,9 @@ export const POSTerminal: React.FC<POSTerminalProps> = ({ terminalId }) => {
             
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2 text-sm text-gray-600">
-                <User className="h-4 w-4" />
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
                 <span>{currentUser?.name}</span>
                 <span className="text-gray-400">|</span>
                 <span className={`px-2 py-1 rounded text-xs font-medium ${
@@ -154,7 +182,9 @@ export const POSTerminal: React.FC<POSTerminalProps> = ({ terminalId }) => {
                   onClick={() => setIsRefundModalOpen(true)}
                   className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-200"
                 >
-                  <RotateCcw className="h-4 w-4" />
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
                   <span>Devoluciones</span>
                 </button>
 
@@ -163,7 +193,10 @@ export const POSTerminal: React.FC<POSTerminalProps> = ({ terminalId }) => {
                     onClick={() => setShowAdminPanel(true)}
                     className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-200"
                   >
-                    <Settings className="h-4 w-4" />
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
                     <span>Administración</span>
                   </button>
                 )}
@@ -172,7 +205,9 @@ export const POSTerminal: React.FC<POSTerminalProps> = ({ terminalId }) => {
                   onClick={handleLogout}
                   className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-200"
                 >
-                  <LogOut className="h-4 w-4" />
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
                   <span>Cerrar Sesión</span>
                 </button>
               </div>
@@ -212,7 +247,9 @@ export const POSTerminal: React.FC<POSTerminalProps> = ({ terminalId }) => {
                     onClick={handleCheckout}
                     className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all duration-200"
                   >
-                    <CreditCard className="h-5 w-5" />
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                    </svg>
                     <span>Procesar Pago</span>
                   </button>
                 </div>
@@ -225,20 +262,20 @@ export const POSTerminal: React.FC<POSTerminalProps> = ({ terminalId }) => {
       {/* Modals */}
       <PaymentModal
         isOpen={isPaymentModalOpen}
-        onClose={() => setIsPaymentModalOpen(false)}
+        onClose={handleClosePaymentModal}
         onPayment={handlePayment}
         total={total}
       />
       
       <ReceiptModal
         isOpen={isReceiptModalOpen}
-        onClose={() => setIsReceiptModalOpen(false)}
+        onClose={handleCloseReceiptModal}
         sale={currentSale}
       />
 
       <RefundModal
         isOpen={isRefundModalOpen}
-        onClose={() => setIsRefundModalOpen(false)}
+        onClose={handleCloseRefundModal}
       />
     </div>
   );

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, CreditCard, Banknote, Check } from 'lucide-react';
+import React, { useState, useCallback } from 'react';
+import { useCartStore } from '../stores/cartStore';
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -18,33 +18,46 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   const [cashReceived, setCashReceived] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
 
-  if (!isOpen) return null;
-
-  const cashAmount = parseFloat(cashReceived) || 0;
-  const change = cashAmount - total;
-
-  const handlePayment = async () => {
-    if (paymentMethod === 'cash' && cashAmount < total) {
-      alert('El monto recibido es insuficiente');
-      return;
+  const handlePayment = useCallback(async () => {
+    if (paymentMethod === 'cash') {
+      const cashAmount = parseFloat(cashReceived) || 0;
+      if (cashAmount < total) {
+        alert('El monto recibido es insuficiente');
+        return;
+      }
     }
 
     setIsProcessing(true);
     
     // Simulate payment processing
+    const processingTime = paymentMethod === 'card' ? 2000 : 500;
+    
     setTimeout(() => {
-      onPayment(paymentMethod);
-      setIsProcessing(false);
-      setCashReceived('');
-    }, paymentMethod === 'card' ? 2000 : 500);
-  };
+      try {
+        onPayment(paymentMethod);
+        setIsProcessing(false);
+        setCashReceived('');
+        setPaymentMethod('cash');
+      } catch (error) {
+        console.error('Error processing payment:', error);
+        setIsProcessing(false);
+        alert('Error al procesar el pago');
+      }
+    }, processingTime);
+  }, [paymentMethod, cashReceived, total, onPayment]);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     if (!isProcessing) {
       onClose();
       setCashReceived('');
+      setPaymentMethod('cash');
     }
-  };
+  }, [isProcessing, onClose]);
+
+  if (!isOpen) return null;
+
+  const cashAmount = parseFloat(cashReceived) || 0;
+  const change = cashAmount - total;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -58,7 +71,9 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             disabled={isProcessing}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors duration-150"
           >
-            <X className="h-5 w-5 text-gray-500" />
+            <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
           </button>
         </div>
 
@@ -82,7 +97,9 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                     : 'border-gray-300 hover:border-gray-400'
                 }`}
               >
-                <Banknote className="h-6 w-6" />
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
                 <span className="text-sm font-medium">Efectivo</span>
               </button>
               
@@ -95,7 +112,9 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                     : 'border-gray-300 hover:border-gray-400'
                 }`}
               >
-                <CreditCard className="h-6 w-6" />
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                </svg>
                 <span className="text-sm font-medium">Tarjeta</span>
               </button>
             </div>
@@ -168,7 +187,9 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
             ) : (
               <>
-                <Check className="h-4 w-4 mr-2" />
+                <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
                 Confirmar Pago
               </>
             )}

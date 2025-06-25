@@ -1,8 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { CartItem, Product } from '../types';
-import { useOfferStore } from './offerStore';
-import { useProductStore } from './productStore';
+import { CartItem, Product } from '../types';
 
 interface CartState {
   items: CartItem[];
@@ -23,49 +21,50 @@ export const useCartStore = create<CartState>()(
       items: [],
 
       addItem: (product, quantity = 1) => {
-        set(state => {
-          const existingItem = state.items.find(item => item.product.id === product.id);
-          
-          if (existingItem) {
-            const newQuantity = existingItem.quantity + quantity;
-            if (newQuantity > product.stock) {
-              alert(`Stock insuficiente. Disponible: ${product.stock}`);
-              return state;
-            }
-            
-            return {
-              items: state.items.map(item =>
-                item.product.id === product.id
-                  ? {
-                      ...item,
-                      quantity: newQuantity,
-                      total: newQuantity * item.unitPrice
-                    }
-                  : item
-              )
-            };
-          } else {
-            if (quantity > product.stock) {
-              alert(`Stock insuficiente. Disponible: ${product.stock}`);
-              return state;
-            }
-            
-            const newItem: CartItem = {
-              product,
-              quantity,
-              unitPrice: product.salePrice,
-              discount: 0,
-              total: product.salePrice * quantity
-            };
-            
-            return {
-              items: [...state.items, newItem]
-            };
-          }
-        });
+        const state = get();
+        const existingItem = state.items.find(item => item.product.id === product.id);
         
-        // Apply offers after adding item
-        setTimeout(() => get().applyOffers(), 0);
+        if (existingItem) {
+          const newQuantity = existingItem.quantity + quantity;
+          if (newQuantity > product.stock) {
+            alert(`Stock insuficiente. Disponible: ${product.stock}`);
+            return;
+          }
+          
+          set({
+            items: state.items.map(item =>
+              item.product.id === product.id
+                ? {
+                    ...item,
+                    quantity: newQuantity,
+                    total: newQuantity * item.unitPrice
+                  }
+                : item
+            )
+          });
+        } else {
+          if (quantity > product.stock) {
+            alert(`Stock insuficiente. Disponible: ${product.stock}`);
+            return;
+          }
+          
+          const newItem: CartItem = {
+            product,
+            quantity,
+            unitPrice: product.salePrice,
+            discount: 0,
+            total: product.salePrice * quantity
+          };
+          
+          set({
+            items: [...state.items, newItem]
+          });
+        }
+        
+        // Apply offers after state update
+        requestAnimationFrame(() => {
+          get().applyOffers();
+        });
       },
 
       updateQuantity: (productId, quantity) => {
@@ -74,13 +73,14 @@ export const useCartStore = create<CartState>()(
           return;
         }
 
-        const item = get().items.find(i => i.product.id === productId);
+        const state = get();
+        const item = state.items.find(i => i.product.id === productId);
         if (item && quantity > item.product.stock) {
           alert(`Stock insuficiente. Disponible: ${item.product.stock}`);
           return;
         }
 
-        set(state => ({
+        set({
           items: state.items.map(item =>
             item.product.id === productId
               ? {
@@ -90,17 +90,22 @@ export const useCartStore = create<CartState>()(
                 }
               : item
           )
-        }));
+        });
 
-        setTimeout(() => get().applyOffers(), 0);
+        requestAnimationFrame(() => {
+          get().applyOffers();
+        });
       },
 
       removeItem: (productId) => {
-        set(state => ({
+        const state = get();
+        set({
           items: state.items.filter(item => item.product.id !== productId)
-        }));
+        });
         
-        setTimeout(() => get().applyOffers(), 0);
+        requestAnimationFrame(() => {
+          get().applyOffers();
+        });
       },
 
       clearCart: () => {
@@ -108,11 +113,13 @@ export const useCartStore = create<CartState>()(
       },
 
       getSubtotal: () => {
-        return get().items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+        const state = get();
+        return state.items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
       },
 
       getDiscountAmount: () => {
-        return get().items.reduce((sum, item) => sum + item.discount, 0);
+        const state = get();
+        return state.items.reduce((sum, item) => sum + item.discount, 0);
       },
 
       getIGVAmount: () => {
@@ -129,85 +136,84 @@ export const useCartStore = create<CartState>()(
 
       applyOffers: () => {
         const state = get();
-        const offers = useOfferStore.getState().getActiveOffers();
         
-        // Reset discounts
-        set(prevState => ({
-          items: prevState.items.map(item => ({
+        // Import offers store dynamically to avoid circular dependency
+        import('./offerStore').then(({ useOfferStore }) => {
+          const offers = useOfferStore.getState().getActiveOffers();
+          
+          // Reset discounts first
+          const itemsWithoutDiscounts = state.items.map(item => ({
             ...item,
             discount: 0,
             total: item.quantity * item.unitPrice
-          }))
-        }));
+          }));
 
-        // Apply active offers
-        offers.forEach(offer => {
-          if (offer.type === 'nxm') {
-            // Apply nxm offers (e.g., 3x2)
-            offer.productIds.forEach(productId => {
-              const item = state.items.find(i => i.product.id === productId);
-              if (item && item.quantity >= offer.buyQuantity) {
-                const setsOfOffer = Math.floor(item.quantity / offer.buyQuantity);
-                const freeItems = setsOfOffer * (offer.buyQuantity - (offer.payQuantity || 0));
-                const discount = freeItems * item.unitPrice;
-                
-                set(prevState => ({
-                  items: prevState.items.map(i =>
-                    i.product.id === productId
-                      ? {
-                          ...i,
-                          discount,
-                          total: (i.quantity * i.unitPrice) - discount
-                        }
-                      : i
-                  )
-                }));
-              }
-            });
-          } else if (offer.type === 'n+m' && offer.freeProductId) {
-            // Apply n+m offers (e.g., 2+1)
-            offer.productIds.forEach(productId => {
-              const item = state.items.find(i => i.product.id === productId);
-              if (item && item.quantity >= offer.buyQuantity) {
-                const setsOfOffer = Math.floor(item.quantity / offer.buyQuantity);
-                const freeQuantity = setsOfOffer * (offer.freeQuantity || 1);
-                
-                // Check if free product is already in cart
-                const freeItem = state.items.find(i => i.product.id === offer.freeProductId);
-                if (freeItem) {
-                  const discount = Math.min(freeQuantity, freeItem.quantity) * freeItem.unitPrice;
-                  
-                  set(prevState => ({
-                    items: prevState.items.map(i =>
-                      i.product.id === offer.freeProductId
-                        ? {
-                            ...i,
-                            discount: Math.min(discount, i.total),
-                            total: i.total - Math.min(discount, i.total)
-                          }
-                        : i
-                    )
-                  }));
-                } else {
-                  // Add free product to cart
-                  const freeProduct = useProductStore.getState().products.find(p => p.id === offer.freeProductId);
-                  if (freeProduct) {
-                    const freeCartItem: CartItem = {
-                      product: freeProduct,
-                      quantity: freeQuantity,
-                      unitPrice: freeProduct.salePrice,
-                      discount: freeQuantity * freeProduct.salePrice,
-                      total: 0
-                    };
+          let updatedItems = [...itemsWithoutDiscounts];
+
+          // Apply active offers
+          offers.forEach(offer => {
+            if (offer.type === 'nxm') {
+              // Apply nxm offers (e.g., 3x2)
+              offer.productIds.forEach(productId => {
+                const itemIndex = updatedItems.findIndex(i => i.product.id === productId);
+                if (itemIndex >= 0) {
+                  const item = updatedItems[itemIndex];
+                  if (item.quantity >= offer.buyQuantity) {
+                    const setsOfOffer = Math.floor(item.quantity / offer.buyQuantity);
+                    const freeItems = setsOfOffer * (offer.buyQuantity - (offer.payQuantity || 0));
+                    const discount = freeItems * item.unitPrice;
                     
-                    set(prevState => ({
-                      items: [...prevState.items, freeCartItem]
-                    }));
+                    updatedItems[itemIndex] = {
+                      ...item,
+                      discount,
+                      total: (item.quantity * item.unitPrice) - discount
+                    };
                   }
                 }
-              }
-            });
-          }
+              });
+            } else if (offer.type === 'n+m' && offer.freeProductId) {
+              // Apply n+m offers (e.g., 2+1)
+              offer.productIds.forEach(productId => {
+                const item = updatedItems.find(i => i.product.id === productId);
+                if (item && item.quantity >= offer.buyQuantity) {
+                  const setsOfOffer = Math.floor(item.quantity / offer.buyQuantity);
+                  const freeQuantity = setsOfOffer * (offer.freeQuantity || 1);
+                  
+                  // Check if free product is already in cart
+                  const freeItemIndex = updatedItems.findIndex(i => i.product.id === offer.freeProductId);
+                  if (freeItemIndex >= 0) {
+                    const freeItem = updatedItems[freeItemIndex];
+                    const discount = Math.min(freeQuantity, freeItem.quantity) * freeItem.unitPrice;
+                    
+                    updatedItems[freeItemIndex] = {
+                      ...freeItem,
+                      discount: Math.min(discount, freeItem.total),
+                      total: freeItem.total - Math.min(discount, freeItem.total)
+                    };
+                  } else {
+                    // Add free product to cart
+                    import('./productStore').then(({ useProductStore }) => {
+                      const freeProduct = useProductStore.getState().products.find(p => p.id === offer.freeProductId);
+                      if (freeProduct) {
+                        const freeCartItem: CartItem = {
+                          product: freeProduct,
+                          quantity: freeQuantity,
+                          unitPrice: freeProduct.salePrice,
+                          discount: freeQuantity * freeProduct.salePrice,
+                          total: 0
+                        };
+                        
+                        updatedItems.push(freeCartItem);
+                      }
+                    });
+                  }
+                }
+              });
+            }
+          });
+
+          // Update state with new items
+          set({ items: updatedItems });
         });
       }
     }),
