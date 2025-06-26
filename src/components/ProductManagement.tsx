@@ -7,6 +7,7 @@ import {
   Package, 
   AlertTriangle,
   DollarSign,
+  
 } from 'lucide-react';
 import { useProductStore } from '../stores/productStore';
 import type { Product } from '../types';

@@ -24,9 +24,16 @@ export const POSTerminal: React.FC<POSTerminalProps> = ({ terminalId }) => {
   const [showAdminPanel, setShowAdminPanel] = useState(false);
 
   const { currentUser, logout, updateLastActivity, checkSessionTimeout } = useAuthStore();
-  const { addItem, getTotal, clearCart, items } = useCartStore();
+  const { addItem, getTotal, getTotalRounded, clearCart, items, setCurrentUser } = useCartStore();
   const { updateStock } = useProductStore();
   const { completeSale } = useSalesStore();
+
+  // Set current user in cart store when user changes
+  useEffect(() => {
+    if (currentUser?.id) {
+      setCurrentUser(currentUser.id);
+    }
+  }, [currentUser?.id, setCurrentUser]);
 
   // Update activity and check for session timeout
   useEffect(() => {
@@ -139,6 +146,7 @@ export const POSTerminal: React.FC<POSTerminalProps> = ({ terminalId }) => {
   }, []);
 
   const total = getTotal();
+  const totalRounded = getTotalRounded();
 
   // Show admin panel if user is admin and admin panel is active
   if (showAdminPanel && currentUser?.role === 'admin') {
@@ -265,6 +273,7 @@ export const POSTerminal: React.FC<POSTerminalProps> = ({ terminalId }) => {
         onClose={handleClosePaymentModal}
         onPayment={handlePayment}
         total={total}
+        totalRounded={totalRounded}
       />
       
       <ReceiptModal

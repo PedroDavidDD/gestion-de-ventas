@@ -22,7 +22,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToMain }) => {
   const [activeTab, setActiveTab] = useState<AdminTab>('products');
   const { currentUser } = useAuthStore();
   const { products, getLowStockProducts } = useProductStore();
-  const { getActiveOffers } = useOfferStore();
+  const { offers, getActiveOffers } = useOfferStore();
 
   if (currentUser?.role !== 'admin') {
     return (

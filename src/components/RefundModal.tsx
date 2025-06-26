@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { X, Search, RotateCcw, AlertTriangle } from 'lucide-react';
 import { useSalesStore } from '../stores/salesStore';
 import { useProductStore } from '../stores/productStore';
 import { useAuthStore } from '../stores/authStore';
@@ -17,7 +16,7 @@ export const RefundModal: React.FC<RefundModalProps> = ({ isOpen, onClose }) => 
   const [refundReason, setRefundReason] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const { getSaleByTicket, processRefund } = useSalesStore();
+  const { getSaleByTicket, processRefund, getRefundsBySale } = useSalesStore();
   const { restoreStock } = useProductStore();
   const { currentUser } = useAuthStore();
 
@@ -40,7 +39,35 @@ export const RefundModal: React.FC<RefundModalProps> = ({ isOpen, onClose }) => 
       return;
     }
 
-    setSelectedSale(sale);
+    // Get existing refunds for this sale
+    const existingRefunds = getRefundsBySale(sale.id);
+    const refundedItems = new Map<string, number>();
+    
+    existingRefunds.forEach(refund => {
+      refund.items.forEach(item => {
+        const existing = refundedItems.get(item.product.id) || 0;
+        refundedItems.set(item.product.id, existing + item.quantity);
+      });
+    });
+
+    // Filter out already refunded items or reduce quantities
+    const availableItems = sale.items.map(item => {
+      const refundedQty = refundedItems.get(item.product.id) || 0;
+      const availableQty = item.quantity - refundedQty;
+      
+      return availableQty > 0 ? {
+        ...item,
+        quantity: availableQty,
+        total: (item.unitPrice * availableQty) - (item.discount * availableQty / item.quantity)
+      } : null;
+    }).filter(item => item !== null) as CartItem[];
+
+    if (availableItems.length === 0) {
+      alert('No hay productos disponibles para devolución en este ticket');
+      return;
+    }
+
+    setSelectedSale({...sale, items: availableItems});
     setRefundItems([]);
   };
 
@@ -99,7 +126,7 @@ export const RefundModal: React.FC<RefundModalProps> = ({ isOpen, onClose }) => 
           restoreStock(item.product.id, item.quantity);
         });
 
-        alert('Devolución procesada exitosamente');
+        alert(`Devolución procesada exitosamente. Monto devuelto: S/. ${refund.refundAmount.toFixed(2)}`);
         handleClose();
       } else {
         alert('Error al procesar la devolución');
@@ -127,7 +154,9 @@ export const RefundModal: React.FC<RefundModalProps> = ({ isOpen, onClose }) => 
       <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-            <RotateCcw className="h-5 w-5 mr-2" />
+            <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
             Procesar Devolución
           </h3>
           <button
@@ -135,7 +164,9 @@ export const RefundModal: React.FC<RefundModalProps> = ({ isOpen, onClose }) => 
             disabled={isProcessing}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors duration-150"
           >
-            <X className="h-5 w-5 text-gray-500" />
+            <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
           </button>
         </div>
 
@@ -150,7 +181,7 @@ export const RefundModal: React.FC<RefundModalProps> = ({ isOpen, onClose }) => 
                 type="text"
                 value={ticketNumber}
                 onChange={(e) => setTicketNumber(e.target.value)}
-                placeholder="Ingresa el número de ticket"
+                placeholder="Ingresa el número de ticket (ej: T1234567890)"
                 className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 disabled={isProcessing}
               />
@@ -159,7 +190,9 @@ export const RefundModal: React.FC<RefundModalProps> = ({ isOpen, onClose }) => 
                 disabled={isProcessing}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 flex items-center space-x-2"
               >
-                <Search className="h-4 w-4" />
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
                 <span>Buscar</span>
               </button>
             </div>
@@ -196,7 +229,7 @@ export const RefundModal: React.FC<RefundModalProps> = ({ isOpen, onClose }) => 
 
               {/* Items to Refund */}
               <div className="space-y-3">
-                <h5 className="font-medium text-gray-900">Productos a Devolver:</h5>
+                <h5 className="font-medium text-gray-900">Productos Disponibles para Devolución:</h5>
                 {selectedSale.items.map((item, index) => {
                   const refundItem = refundItems.find(ri => ri.product.id === item.product.id);
                   const refundQuantity = refundItem?.quantity || 0;
@@ -206,8 +239,13 @@ export const RefundModal: React.FC<RefundModalProps> = ({ isOpen, onClose }) => 
                       <div className="flex-1">
                         <p className="font-medium text-gray-900">{item.product.description}</p>
                         <p className="text-sm text-gray-600">
-                          Precio: S/. {item.unitPrice.toFixed(2)} | Cantidad Original: {item.quantity}
+                          Precio: S/. {item.unitPrice.toFixed(2)} | Cantidad Disponible: {item.quantity}
                         </p>
+                        {item.discount > 0 && (
+                          <p className="text-sm text-green-600">
+                            Descuento aplicado: S/. {(item.discount / item.quantity * (refundQuantity || item.quantity)).toFixed(2)}
+                          </p>
+                        )}
                       </div>
                       
                       <div className="flex items-center space-x-3">
@@ -238,15 +276,16 @@ export const RefundModal: React.FC<RefundModalProps> = ({ isOpen, onClose }) => 
               {/* Refund Reason */}
               <div className="mt-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Motivo de la Devolución
+                  Motivo de la Devolución *
                 </label>
                 <textarea
                   value={refundReason}
                   onChange={(e) => setRefundReason(e.target.value)}
                   rows={3}
-                  placeholder="Describe el motivo de la devolución..."
+                  placeholder="Describe el motivo de la devolución (producto defectuoso, cambio de opinión, etc.)"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   disabled={isProcessing}
+                  required
                 />
               </div>
 
@@ -260,7 +299,9 @@ export const RefundModal: React.FC<RefundModalProps> = ({ isOpen, onClose }) => 
                     </span>
                   </div>
                   <div className="flex items-center mt-2 text-sm text-gray-600">
-                    <AlertTriangle className="h-4 w-4 mr-1" />
+                    <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
                     <span>El stock será restaurado automáticamente</span>
                   </div>
                 </div>
@@ -295,7 +336,9 @@ export const RefundModal: React.FC<RefundModalProps> = ({ isOpen, onClose }) => 
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
               ) : (
                 <>
-                  <RotateCcw className="h-4 w-4 mr-2" />
+                  <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
                   Procesar Devolución
                 </>
               )}

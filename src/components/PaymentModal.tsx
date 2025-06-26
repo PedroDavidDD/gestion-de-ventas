@@ -1,27 +1,30 @@
 import React, { useState, useCallback } from 'react';
-import { useCartStore } from '../stores/cartStore';
 
 interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
   onPayment: (method: 'cash' | 'card') => void;
   total: number;
+  totalRounded: number;
 }
 
 export const PaymentModal: React.FC<PaymentModalProps> = ({ 
   isOpen, 
   onClose, 
   onPayment, 
-  total 
+  total,
+  totalRounded
 }) => {
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card'>('cash');
   const [cashReceived, setCashReceived] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handlePayment = useCallback(async () => {
+    const finalTotal = paymentMethod === 'cash' ? totalRounded : total;
+    
     if (paymentMethod === 'cash') {
       const cashAmount = parseFloat(cashReceived) || 0;
-      if (cashAmount < total) {
+      if (cashAmount < finalTotal) {
         alert('El monto recibido es insuficiente');
         return;
       }
@@ -44,7 +47,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         alert('Error al procesar el pago');
       }
     }, processingTime);
-  }, [paymentMethod, cashReceived, total, onPayment]);
+  }, [paymentMethod, cashReceived, total, totalRounded, onPayment]);
 
   const handleClose = useCallback(() => {
     if (!isProcessing) {
@@ -56,8 +59,9 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
   if (!isOpen) return null;
 
+  const finalTotal = paymentMethod === 'cash' ? totalRounded : total;
   const cashAmount = parseFloat(cashReceived) || 0;
-  const change = cashAmount - total;
+  const change = cashAmount - finalTotal;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -79,9 +83,17 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
         <div className="p-6 space-y-6">
           <div className="text-center">
-            <p className="text-2xl font-bold text-gray-900">
-              Total: S/. {total.toFixed(2)}
+            <p className="text-sm text-gray-600 mb-2">
+              Total Original: S/. {total.toFixed(2)}
             </p>
+            <p className="text-2xl font-bold text-gray-900">
+              Total a Pagar: S/. {finalTotal.toFixed(2)}
+            </p>
+            {paymentMethod === 'cash' && totalRounded !== total && (
+              <p className="text-sm text-blue-600 mt-1">
+                (Redondeado para efectivo)
+              </p>
+            )}
           </div>
 
           <div className="space-y-4">
@@ -101,6 +113,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
                 <span className="text-sm font-medium">Efectivo</span>
+                <span className="text-xs text-gray-500">S/. {totalRounded.toFixed(2)}</span>
               </button>
               
               <button
@@ -116,6 +129,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                 </svg>
                 <span className="text-sm font-medium">Tarjeta</span>
+                <span className="text-xs text-gray-500">S/. {total.toFixed(2)}</span>
               </button>
             </div>
           </div>
@@ -131,7 +145,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 value={cashReceived}
                 onChange={(e) => setCashReceived(e.target.value)}
                 disabled={isProcessing}
-                step="0.01"
+                step="0.05"
                 min="0"
                 className="block w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="0.00"
@@ -145,7 +159,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Total:</span>
-                    <span className="font-medium">S/. {total.toFixed(2)}</span>
+                    <span className="font-medium">S/. {finalTotal.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-lg font-bold border-t border-gray-300 pt-2 mt-2">
                     <span className={change >= 0 ? 'text-green-700' : 'text-red-700'}>
@@ -180,7 +194,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           </button>
           <button
             onClick={handlePayment}
-            disabled={isProcessing || (paymentMethod === 'cash' && cashAmount < total)}
+            disabled={isProcessing || (paymentMethod === 'cash' && cashAmount < finalTotal)}
             className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center"
           >
             {isProcessing ? (

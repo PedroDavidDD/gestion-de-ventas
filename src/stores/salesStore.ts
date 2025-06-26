@@ -23,6 +23,7 @@ interface SalesState {
   getSaleByTicket: (ticketNumber: string) => Sale | undefined;
   getTodaySales: () => Sale[];
   getSalesByEmployee: (employeeId: string) => Sale[];
+  getRefundsBySale: (saleId: string) => Refund[];
 }
 
 export const useSalesStore = create<SalesState>()(
@@ -85,11 +86,15 @@ export const useSalesStore = create<SalesState>()(
           createdAt: new Date()
         };
 
+        // Check if this is a complete refund
+        const totalRefunded = get().getRefundsBySale(originalSaleId).reduce((sum, r) => sum + r.refundAmount, 0) + refundAmount;
+        const isCompleteRefund = Math.abs(totalRefunded - originalSale.total) < 0.01;
+
         // Update original sale status
         set(state => ({
           sales: state.sales.map(s =>
             s.id === originalSaleId
-              ? { ...s, status: 'partial_refund' as const }
+              ? { ...s, status: isCompleteRefund ? 'refunded' as const : 'partial_refund' as const }
               : s
           ),
           refunds: [...state.refunds, refund]
@@ -111,6 +116,10 @@ export const useSalesStore = create<SalesState>()(
 
       getSalesByEmployee: (employeeId) => {
         return get().sales.filter(s => s.employeeId === employeeId);
+      },
+
+      getRefundsBySale: (saleId) => {
+        return get().refunds.filter(r => r.originalSaleId === saleId);
       }
     }),
     {

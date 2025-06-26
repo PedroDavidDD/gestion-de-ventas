@@ -1,17 +1,21 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { CartItem, Product } from '../types';
+import type { CartItem, Product } from '../types';
 
 interface CartState {
   items: CartItem[];
+  currentUserId: string | null;
+  userCarts: Record<string, CartItem[]>;
   addItem: (product: Product, quantity?: number) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   removeItem: (productId: string) => void;
   clearCart: () => void;
+  setCurrentUser: (userId: string) => void;
   getSubtotal: () => number;
   getIGVAmount: () => number;
   getDiscountAmount: () => number;
   getTotal: () => number;
+  getTotalRounded: () => number;
   applyOffers: () => void;
 }
 
@@ -19,9 +23,34 @@ export const useCartStore = create<CartState>()(
   persist(
     (set, get) => ({
       items: [],
+      currentUserId: null,
+      userCarts: {},
+
+      setCurrentUser: (userId: string) => {
+        const state = get();
+        
+        // Save current cart to user's cart if there's a current user
+        if (state.currentUserId && state.items.length > 0) {
+          set(prevState => ({
+            userCarts: {
+              ...prevState.userCarts,
+              [state.currentUserId!]: [...state.items]
+            }
+          }));
+        }
+        
+        // Load new user's cart
+        const userCart = state.userCarts[userId] || [];
+        set({
+          currentUserId: userId,
+          items: [...userCart]
+        });
+      },
 
       addItem: (product, quantity = 1) => {
         const state = get();
+        if (!state.currentUserId) return;
+        
         const existingItem = state.items.find(item => item.product.id === product.id);
         
         if (existingItem) {
@@ -109,7 +138,18 @@ export const useCartStore = create<CartState>()(
       },
 
       clearCart: () => {
-        set({ items: [] });
+        const state = get();
+        if (state.currentUserId) {
+          set(prevState => ({
+            items: [],
+            userCarts: {
+              ...prevState.userCarts,
+              [state.currentUserId!]: []
+            }
+          }));
+        } else {
+          set({ items: [] });
+        }
       },
 
       getSubtotal: () => {
@@ -132,6 +172,10 @@ export const useCartStore = create<CartState>()(
         const discount = get().getDiscountAmount();
         const igv = get().getIGVAmount();
         return subtotal - discount + igv;
+      },
+
+      getTotalRounded: () => {
+        return Math.round(get().getTotal() * 20) / 20; // Redondeo a múltiplos de 0.05 (5 céntimos)
       },
 
       applyOffers: () => {
