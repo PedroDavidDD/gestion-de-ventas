@@ -6,10 +6,12 @@ interface AuthState {
   currentUser: User | null;
   sessions: Session[];
   isAuthenticated: boolean;
+
   login: (code: string, terminalId: string) => Promise<boolean>;
   logout: () => void;
   updateLastActivity: () => void;
   checkSessionTimeout: () => void;
+  getSecondsLeft: () => number;
   isUserActiveInOtherTerminal: (userId: string, currentTerminalId: string) => boolean;
 }
 
@@ -20,23 +22,25 @@ const mockUsers: User[] = [
     code: '1001',
     name: 'Juan Pérez',
     role: 'employee',
-    isActive: true
+    isActive: true,
   },
   {
     id: '2',
     code: '2001',
     name: 'María García',
     role: 'employee',
-    isActive: true
+    isActive: true,
   },
   {
     id: '3',
     code: '9999',
     name: 'Carlos Admin',
     role: 'admin',
-    isActive: true
+    isActive: true,
   }
 ];
+
+const SESSION_TIMEOUT_SECONDS = 10; 
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -44,34 +48,30 @@ export const useAuthStore = create<AuthState>()(
       currentUser: null,
       sessions: [],
       isAuthenticated: false,
+      
 
       login: async (code: string, terminalId: string): Promise<boolean> => {
         const user = mockUsers.find(u => u.code === code && u.isActive);
-        
-        if (!user) {
-          return false;
-        }
+        if (!user) return false;
 
-        // Check if user is already active in another terminal
         const state = get();
         if (state.isUserActiveInOtherTerminal(user.id, terminalId)) {
           alert('El empleado ya está activo en otro terminal');
           return false;
         }
 
-        // Create new session
-        const newSession: Session = {
+        const newSession = {
           terminalId,
           employeeId: user.id,
           startTime: new Date(),
           lastActivity: new Date(),
-          isActive: true
+          isActive: true,
         };
 
-        set(state => ({
+        set(prev => ({
           currentUser: { ...user, terminalId, lastLogin: new Date() },
-          sessions: [...state.sessions.filter(s => s.terminalId !== terminalId), newSession],
-          isAuthenticated: true
+          sessions: [...prev.sessions.filter(s => s.terminalId !== terminalId), newSession],
+          isAuthenticated: true,
         }));
 
         return true;
@@ -80,14 +80,14 @@ export const useAuthStore = create<AuthState>()(
       logout: () => {
         const state = get();
         if (state.currentUser?.terminalId) {
-          set(prevState => ({
+          set(prev => ({
             currentUser: null,
             isAuthenticated: false,
-            sessions: prevState.sessions.map(s => 
-              s.terminalId === state.currentUser?.terminalId 
+            sessions: prev.sessions.map(s =>
+              s.terminalId === state.currentUser?.terminalId
                 ? { ...s, isActive: false }
                 : s
-            )
+            ),
           }));
         }
       },
@@ -95,12 +95,12 @@ export const useAuthStore = create<AuthState>()(
       updateLastActivity: () => {
         const state = get();
         if (state.currentUser?.terminalId) {
-          set(prevState => ({
-            sessions: prevState.sessions.map(s =>
+          set(prev => ({
+            sessions: prev.sessions.map(s =>
               s.terminalId === state.currentUser?.terminalId
                 ? { ...s, lastActivity: new Date() }
                 : s
-            )
+            ),
           }));
         }
       },
@@ -108,13 +108,22 @@ export const useAuthStore = create<AuthState>()(
       checkSessionTimeout: () => {
         const state = get();
         const now = new Date();
-        const timeoutMinutes = 20;
+
+        const timeoutSeconds = SESSION_TIMEOUT_SECONDS;
 
         state.sessions.forEach(session => {
           if (session.isActive) {
-            const minutesSinceLastActivity = (now.getTime() - session.lastActivity.getTime()) / (1000 * 60);
-            
-            if (minutesSinceLastActivity >= timeoutMinutes) {
+            let lastActivity = session.lastActivity;
+
+            if (typeof lastActivity === 'string') {
+              lastActivity = new Date(lastActivity);
+            }
+
+            const diffInMs = now.getTime() - lastActivity.getTime();
+            const secondsSinceLastActivity = Math.floor(diffInMs / 1000);
+
+            console.log(secondsSinceLastActivity)
+            if (secondsSinceLastActivity >= timeoutSeconds) {
               if (state.currentUser?.terminalId === session.terminalId) {
                 get().logout();
                 alert('Sesión cerrada por inactividad');
@@ -124,22 +133,61 @@ export const useAuthStore = create<AuthState>()(
         });
       },
 
-      isUserActiveInOtherTerminal: (userId: string, currentTerminalId: string): boolean => {
+      getSecondsLeft: () => {
         const state = get();
-        return state.sessions.some(s => 
-          s.employeeId === userId && 
-          s.terminalId !== currentTerminalId && 
-          s.isActive
+        if (!state.currentUser) return 0;
+
+        const session = state.sessions.find(
+          s => s.terminalId === state.currentUser?.terminalId && s.isActive
         );
-      }
+
+        if (!session) return 0;
+
+        let lastActivity = session.lastActivity;
+        if (typeof lastActivity === 'string') {
+          lastActivity = new Date(lastActivity);
+        }
+
+        const now = new Date();
+        const diffInMs = now.getTime() - lastActivity.getTime();
+        const secondsSinceLastActivity = Math.floor(diffInMs / 1000);
+        const secondsLeft = Math.max(0, SESSION_TIMEOUT_SECONDS - secondsSinceLastActivity);
+
+        return secondsLeft;
+      },
+
+      isUserActiveInOtherTerminal: (
+        userId: string,
+        currentTerminalId: string
+      ): boolean => {
+        const state = get();
+
+        return state.sessions.some(s => {
+          let lastActivity = s.lastActivity;
+          if (typeof lastActivity === 'string') {
+            lastActivity = new Date(lastActivity);
+          }
+
+          return (
+            s.employeeId === userId &&
+            s.terminalId !== currentTerminalId &&
+            s.isActive
+          );
+        });
+      },
     }),
     {
       name: 'auth-storage',
       partialize: (state) => ({
         currentUser: state.currentUser,
-        sessions: state.sessions,
-        isAuthenticated: state.isAuthenticated
-      })
+        sessions: state.sessions.map((s) => ({
+          ...s,
+          lastActivity: s.lastActivity instanceof Date 
+            ? s.lastActivity.toISOString()
+            : new Date(s.lastActivity).toISOString(),
+        })),
+        isAuthenticated: state.isAuthenticated,
+      }),
     }
   )
 );

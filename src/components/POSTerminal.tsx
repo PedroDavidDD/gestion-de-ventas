@@ -10,6 +10,7 @@ import { ReceiptModal } from './ReceiptModal';
 import { RefundModal } from './RefundModal';
 import { AdminPanel } from './AdminPanel';
 import type { Product, Sale } from '../types';
+import InactivityCounter from './InactivityCounter';
 
 interface POSTerminalProps {
   terminalId: string;
@@ -52,7 +53,7 @@ export const POSTerminal: React.FC<POSTerminalProps> = ({ terminalId }) => {
     });
 
     // Check session timeout every minute
-    const sessionInterval = setInterval(handleSessionCheck, 60000);
+    const sessionInterval = setInterval(handleSessionCheck, 1000);
 
     return () => {
       events.forEach(event => {
@@ -155,6 +156,7 @@ export const POSTerminal: React.FC<POSTerminalProps> = ({ terminalId }) => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <InactivityCounter/>
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
