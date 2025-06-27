@@ -1,6 +1,6 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import type { User, Session } from '../types';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import type { User, Session } from "../types";
 
 interface AuthState {
   currentUser: User | null;
@@ -12,35 +12,38 @@ interface AuthState {
   updateLastActivity: () => void;
   checkSessionTimeout: () => void;
   getSecondsLeft: () => number;
-  isUserActiveInOtherTerminal: (userId: string, currentTerminalId: string) => boolean;
+  isUserActiveInOtherTerminal: (
+    userId: string,
+    currentTerminalId: string
+  ) => boolean;
 }
 
 // Mock users data
 const mockUsers: User[] = [
   {
-    id: '1',
-    code: '1001',
-    name: 'Juan Pérez',
-    role: 'employee',
+    id: "1",
+    code: "1001",
+    name: "Juan Pérez",
+    role: "employee",
     isActive: true,
   },
   {
-    id: '2',
-    code: '2001',
-    name: 'María García',
-    role: 'employee',
+    id: "2",
+    code: "2001",
+    name: "María García",
+    role: "employee",
     isActive: true,
   },
   {
-    id: '3',
-    code: '9999',
-    name: 'Carlos Admin',
-    role: 'admin',
+    id: "3",
+    code: "9999",
+    name: "Carlos Admin",
+    role: "admin",
     isActive: true,
-  }
+  },
 ];
 
-const SESSION_TIMEOUT_SECONDS = 10; 
+const SESSION_TIMEOUT_SECONDS = 1200;
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -48,15 +51,14 @@ export const useAuthStore = create<AuthState>()(
       currentUser: null,
       sessions: [],
       isAuthenticated: false,
-      
 
       login: async (code: string, terminalId: string): Promise<boolean> => {
-        const user = mockUsers.find(u => u.code === code && u.isActive);
+        const user = mockUsers.find((u) => u.code === code && u.isActive);
         if (!user) return false;
 
         const state = get();
         if (state.isUserActiveInOtherTerminal(user.id, terminalId)) {
-          alert('El empleado ya está activo en otro terminal');
+          alert("El empleado ya está activo en otro terminal");
           return false;
         }
 
@@ -68,9 +70,12 @@ export const useAuthStore = create<AuthState>()(
           isActive: true,
         };
 
-        set(prev => ({
+        set((prev) => ({
           currentUser: { ...user, terminalId, lastLogin: new Date() },
-          sessions: [...prev.sessions.filter(s => s.terminalId !== terminalId), newSession],
+          sessions: [
+            ...prev.sessions.filter((s) => s.terminalId !== terminalId),
+            newSession,
+          ],
           isAuthenticated: true,
         }));
 
@@ -80,10 +85,10 @@ export const useAuthStore = create<AuthState>()(
       logout: () => {
         const state = get();
         if (state.currentUser?.terminalId) {
-          set(prev => ({
+          set((prev) => ({
             currentUser: null,
             isAuthenticated: false,
-            sessions: prev.sessions.map(s =>
+            sessions: prev.sessions.map((s) =>
               s.terminalId === state.currentUser?.terminalId
                 ? { ...s, isActive: false }
                 : s
@@ -95,8 +100,8 @@ export const useAuthStore = create<AuthState>()(
       updateLastActivity: () => {
         const state = get();
         if (state.currentUser?.terminalId) {
-          set(prev => ({
-            sessions: prev.sessions.map(s =>
+          set((prev) => ({
+            sessions: prev.sessions.map((s) =>
               s.terminalId === state.currentUser?.terminalId
                 ? { ...s, lastActivity: new Date() }
                 : s
@@ -111,22 +116,22 @@ export const useAuthStore = create<AuthState>()(
 
         const timeoutSeconds = SESSION_TIMEOUT_SECONDS;
 
-        state.sessions.forEach(session => {
+        state.sessions.forEach((session) => {
           if (session.isActive) {
             let lastActivity = session.lastActivity;
 
-            if (typeof lastActivity === 'string') {
+            if (typeof lastActivity === "string") {
               lastActivity = new Date(lastActivity);
             }
 
             const diffInMs = now.getTime() - lastActivity.getTime();
             const secondsSinceLastActivity = Math.floor(diffInMs / 1000);
 
-            console.log(secondsSinceLastActivity)
+            console.log(secondsSinceLastActivity);
             if (secondsSinceLastActivity >= timeoutSeconds) {
               if (state.currentUser?.terminalId === session.terminalId) {
                 get().logout();
-                alert('Sesión cerrada por inactividad');
+                alert("Sesión cerrada por inactividad");
               }
             }
           }
@@ -138,20 +143,23 @@ export const useAuthStore = create<AuthState>()(
         if (!state.currentUser) return 0;
 
         const session = state.sessions.find(
-          s => s.terminalId === state.currentUser?.terminalId && s.isActive
+          (s) => s.terminalId === state.currentUser?.terminalId && s.isActive
         );
 
         if (!session) return 0;
 
         let lastActivity = session.lastActivity;
-        if (typeof lastActivity === 'string') {
+        if (typeof lastActivity === "string") {
           lastActivity = new Date(lastActivity);
         }
 
         const now = new Date();
         const diffInMs = now.getTime() - lastActivity.getTime();
         const secondsSinceLastActivity = Math.floor(diffInMs / 1000);
-        const secondsLeft = Math.max(0, SESSION_TIMEOUT_SECONDS - secondsSinceLastActivity);
+        const secondsLeft = Math.max(
+          0,
+          SESSION_TIMEOUT_SECONDS - secondsSinceLastActivity
+        );
 
         return secondsLeft;
       },
@@ -162,9 +170,9 @@ export const useAuthStore = create<AuthState>()(
       ): boolean => {
         const state = get();
 
-        return state.sessions.some(s => {
+        return state.sessions.some((s) => {
           let lastActivity = s.lastActivity;
-          if (typeof lastActivity === 'string') {
+          if (typeof lastActivity === "string") {
             lastActivity = new Date(lastActivity);
           }
 
@@ -177,14 +185,15 @@ export const useAuthStore = create<AuthState>()(
       },
     }),
     {
-      name: 'auth-storage',
+      name: "auth-storage",
       partialize: (state) => ({
         currentUser: state.currentUser,
         sessions: state.sessions.map((s) => ({
           ...s,
-          lastActivity: s.lastActivity instanceof Date 
-            ? s.lastActivity.toISOString()
-            : new Date(s.lastActivity).toISOString(),
+          lastActivity:
+            s.lastActivity instanceof Date
+              ? s.lastActivity.toISOString()
+              : new Date(s.lastActivity).toISOString(),
         })),
         isAuthenticated: state.isAuthenticated,
       }),
