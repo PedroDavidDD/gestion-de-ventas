@@ -19,13 +19,13 @@ export const Login: React.FC<LoginProps> = ({ terminalId }) => {
     e.preventDefault();
     
     if (!employeeCode.trim()) {
-      setError('Por favor ingresa tu código de empleado');
+      setError('Por favor ingrese su código');
       return;
     }
 
     //  Validar contraseña
     if (!password.trim()) {
-      setError('Por favor ingresa tu contraseña');
+      setError('Por favor ingrese su contraseña');
       return;
     }
 
@@ -37,7 +37,7 @@ export const Login: React.FC<LoginProps> = ({ terminalId }) => {
       const success = await login(employeeCode, password, terminalId);
       
       if (!success) {
-        setError('Código de empleado o contraseña incorrectos');
+        setError('Código o contraseña inválido');
       }
     } catch (err) {
       setError('Error al iniciar sesión');
@@ -49,7 +49,7 @@ export const Login: React.FC<LoginProps> = ({ terminalId }) => {
   };
 
   useEffect(() => {
-    // Focus on input when component mounts
+    //  Enfocar el campo de código al cargar el componente
     const input = document.getElementById('employee-code');
     if (input) {
       input.focus();
