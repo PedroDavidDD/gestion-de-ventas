@@ -6,19 +6,19 @@ interface AuthState {
   currentUser: User | null;
   sessions: Session[];
   isAuthenticated: boolean;
-  users: User[]; // ✅ NUEVO: Usuarios en el estado
+  users: User[]; 
   login: (code: string, password: string, terminalId: string) => Promise<boolean>;
   logout: () => void;
   updateLastActivity: () => void;
   checkSessionTimeout: () => void;
   isUserActiveInOtherTerminal: (userId: string, currentTerminalId: string) => boolean;
-  updateUsers: (users: User[]) => void; // ✅ NUEVO: Función para actualizar usuarios
-  addUser: (user: Omit<User, 'id'>) => void; // ✅ NUEVO: Agregar usuario
-  updateUser: (id: string, updates: Partial<User>) => void; // ✅ NUEVO: Actualizar usuario
-  deleteUser: (id: string) => void; // ✅ NUEVO: Eliminar usuario
+  updateUsers: (users: User[]) => void; 
+  addUser: (user: Omit<User, 'id'>) => void; 
+  updateUser: (id: string, updates: Partial<User>) => void; 
+  deleteUser: (id: string) => void; 
 }
 
-// ✅ Datos iniciales de usuarios (solo para primera carga)
+
 const initialUsers: User[] = [
   {
     id: '1',
@@ -52,7 +52,7 @@ export const useAuthStore = create<AuthState>()(
       currentUser: null,
       sessions: [],
       isAuthenticated: false,
-      users: initialUsers, // ✅ NUEVO: Usuarios en el estado
+      users: initialUsers, 
 
       
       login: async (code: string, password: string, terminalId: string): Promise<boolean> => {
@@ -63,12 +63,12 @@ export const useAuthStore = create<AuthState>()(
           return false;
         }
 
-        // ✅ NUEVO: Validar si el usuario está activo
+        
         if (!user.isActive) {
           throw new Error('Usuario inactivo. Contacte con administración');
         }
 
-        // ✅ Validar contraseña
+        
         if (user.password !== password) {
           return false;
         }
@@ -152,7 +152,7 @@ export const useAuthStore = create<AuthState>()(
         );
       },
 
-      // ✅ NUEVO: Funciones para gestionar usuarios
+      
       updateUsers: (users: User[]) => {
         set({ users });
       },
@@ -187,7 +187,7 @@ export const useAuthStore = create<AuthState>()(
         currentUser: state.currentUser,
         sessions: state.sessions,
         isAuthenticated: state.isAuthenticated,
-        users: state.users // ✅ NUEVO: Persistir usuarios
+        users: state.users 
       })
     }
   )

@@ -39,7 +39,7 @@ export const Login: React.FC<LoginProps> = ({ terminalId }) => {
         setError('Código o contraseña inválido');
       }
     } catch (err: any) {
-      // ✅ Manejo específico de errores
+      // Manejo específico de errores
       if (err.message.includes('inactivo')) {
         setError('Usuario inactivo. Contacte con administración');
       } else if (err.message.includes('activo en otro terminal')) {

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, Edit, Trash2, User, Shield, Eye, EyeOff, Lock } from 'lucide-react';
-import { useAuthStore } from '../stores/authStore'; // ✅ NUEVO: Importar authStore
+import { useAuthStore } from '../stores/authStore'; 
 
 interface UserFormData {
   code: string;
@@ -11,7 +11,7 @@ interface UserFormData {
 }
 
 export const UserManagement: React.FC = () => {
-  // ✅ NUEVO: Usar usuarios del authStore
+  
   const { users, addUser, updateUser, deleteUser } = useAuthStore();
   
   const [showForm, setShowForm] = useState(false);
@@ -29,7 +29,7 @@ export const UserManagement: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // ✅ Validar código único
+    
     const codeExists = users.some(u => 
       u.code === formData.code && (!editingUser || u.id !== editingUser.id)
     );
@@ -40,10 +40,10 @@ export const UserManagement: React.FC = () => {
     }
 
     if (editingUser) {
-      // ✅ ACTUALIZAR: Usar función del store
+      
       updateUser(editingUser.id, formData);
     } else {
-      // ✅ ACTUALIZAR: Usar función del store
+      
       addUser({
         ...formData,
       });
@@ -79,7 +79,7 @@ export const UserManagement: React.FC = () => {
 
   const handleDelete = (userId: string) => {
     if (confirm('¿Estás seguro de eliminar este usuario?')) {
-      // ✅ ACTUALIZAR: Usar función del store
+      
       deleteUser(userId);
     }
   };
@@ -87,7 +87,7 @@ export const UserManagement: React.FC = () => {
   const toggleUserStatus = (userId: string) => {
     const user = users.find(u => u.id === userId);
     if (user) {
-      // ✅ ACTUALIZAR: Usar función del store
+      
       updateUser(userId, { isActive: !user.isActive });
     }
   };
