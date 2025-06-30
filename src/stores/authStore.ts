@@ -16,6 +16,7 @@ interface AuthState {
   addUser: (user: Omit<User, 'id'>) => void; 
   updateUser: (id: string, updates: Partial<User>) => void; 
   deleteUser: (id: string) => void; 
+  getSecondsLeft: () => number;
 }
 
 
@@ -45,6 +46,8 @@ const initialUsers: User[] = [
     password: 'admin123'
   }
 ];
+
+const SESSION_TIMEOUT_SECONDS = 10; 
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -124,16 +127,48 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
+       getSecondsLeft: () => {
+        const state = get();
+        if (!state.currentUser) return 0;
+
+        const session = state.sessions.find(
+          s => s.terminalId === state.currentUser?.terminalId && s.isActive
+        );
+
+        if (!session) return 0;
+
+        let lastActivity = session.lastActivity;
+        if (typeof lastActivity === 'string') {
+          lastActivity = new Date(lastActivity);
+        }
+
+        const now = new Date();
+        const diffInMs = now.getTime() - lastActivity.getTime();
+        const secondsSinceLastActivity = Math.floor(diffInMs / 1000);
+        const secondsLeft = Math.max(0, SESSION_TIMEOUT_SECONDS - secondsSinceLastActivity);
+
+        return secondsLeft;
+      },
+
       checkSessionTimeout: () => {
         const state = get();
         const now = new Date();
-        const timeoutMinutes = 20;
+
+        const timeoutSeconds = SESSION_TIMEOUT_SECONDS;
 
         state.sessions.forEach(session => {
           if (session.isActive) {
-            const minutesSinceLastActivity = (now.getTime() - session.lastActivity.getTime()) / (1000 * 60);
-            
-            if (minutesSinceLastActivity >= timeoutMinutes) {
+            let lastActivity = session.lastActivity;
+
+            if (typeof lastActivity === 'string') {
+              lastActivity = new Date(lastActivity);
+            }
+
+            const diffInMs = now.getTime() - lastActivity.getTime();
+            const secondsSinceLastActivity = Math.floor(diffInMs / 1000);
+
+            console.log(secondsSinceLastActivity)
+            if (secondsSinceLastActivity >= timeoutSeconds) {
               if (state.currentUser?.terminalId === session.terminalId) {
                 get().logout();
                 alert('Sesión cerrada por inactividad');
