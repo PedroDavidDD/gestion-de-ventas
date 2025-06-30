@@ -4,6 +4,7 @@ export interface User {
   name: string;
   role: 'employee' | 'admin';
   isActive: boolean;
+  password: string;
   lastLogin?: Date;
   terminalId?: string;
 }

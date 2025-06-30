@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Edit, Trash2, User, Shield, Eye, EyeOff } from 'lucide-react';
+import { Plus, Edit, Trash2, User, Shield, Eye, EyeOff, Lock } from 'lucide-react';
 
 interface User {
   id: string;
@@ -7,6 +7,7 @@ interface User {
   name: string;
   role: 'employee' | 'admin';
   isActive: boolean;
+  password: string; 
   lastLogin?: Date;
   createdAt: Date;
 }
@@ -19,6 +20,7 @@ export const UserManagement: React.FC = () => {
       name: 'Juan Pérez',
       role: 'employee',
       isActive: true,
+      password: '1234', 
       lastLogin: new Date(),
       createdAt: new Date('2024-01-01')
     },
@@ -28,6 +30,7 @@ export const UserManagement: React.FC = () => {
       name: 'María García',
       role: 'employee',
       isActive: true,
+      password: '1234',
       lastLogin: new Date(),
       createdAt: new Date('2024-01-01')
     },
@@ -37,6 +40,7 @@ export const UserManagement: React.FC = () => {
       name: 'Carlos Admin',
       role: 'admin',
       isActive: true,
+      password: 'admin123',
       lastLogin: new Date(),
       createdAt: new Date('2024-01-01')
     }
@@ -44,11 +48,13 @@ export const UserManagement: React.FC = () => {
 
   const [showForm, setShowForm] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [showPassword, setShowPassword] = useState(false); 
 
   const [formData, setFormData] = useState({
     code: '',
     name: '',
     role: 'employee' as 'employee' | 'admin',
+    password: '', 
     isActive: true
   });
 
@@ -78,10 +84,12 @@ export const UserManagement: React.FC = () => {
       code: '',
       name: '',
       role: 'employee',
+      password: '', 
       isActive: true
     });
     setShowForm(false);
     setEditingUser(null);
+    setShowPassword(false);
   };
 
   const handleEdit = (user: User) => {
@@ -89,6 +97,7 @@ export const UserManagement: React.FC = () => {
       code: user.code,
       name: user.name,
       role: user.role,
+      password: user.password, 
       isActive: user.isActive
     });
     setEditingUser(user);
@@ -201,6 +210,37 @@ export const UserManagement: React.FC = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="ej: Juan Pérez"
                 />
+              </div>
+
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Contraseña
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Lock className="h-4 w-4 text-gray-400" />
+                  </div>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    required
+                    value={formData.password}
+                    onChange={(e) => setFormData({...formData, password: e.target.value})}
+                    className="w-full pl-10 pr-12 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Ingresa la contraseña"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                    )}
+                  </button>
+                </div>
               </div>
 
               <div>
