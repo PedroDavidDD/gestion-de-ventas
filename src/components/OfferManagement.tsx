@@ -222,9 +222,6 @@ export const OfferManagement: React.FC = () => {
                     </option>
                   ))}
                 </select>
-                <p className="text-xs text-gray-500 mt-1">
-                  Mantén presionado Ctrl (Cmd en Mac) para seleccionar múltiples productos
-                </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
