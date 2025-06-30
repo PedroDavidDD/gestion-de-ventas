@@ -1,79 +1,52 @@
 import React, { useState } from 'react';
 import { Plus, Edit, Trash2, User, Shield, Eye, EyeOff, Lock } from 'lucide-react';
+import { useAuthStore } from '../stores/authStore'; // ✅ NUEVO: Importar authStore
 
-interface User {
-  id: string;
+interface UserFormData {
   code: string;
   name: string;
   role: 'employee' | 'admin';
+  password: string;
   isActive: boolean;
-  password: string; 
-  lastLogin?: Date;
-  createdAt: Date;
 }
 
 export const UserManagement: React.FC = () => {
-  const [users, setUsers] = useState<User[]>([
-    {
-      id: '1',
-      code: '1001',
-      name: 'Juan Pérez',
-      role: 'employee',
-      isActive: true,
-      password: '1234', 
-      lastLogin: new Date(),
-      createdAt: new Date('2024-01-01')
-    },
-    {
-      id: '2',
-      code: '2001',
-      name: 'María García',
-      role: 'employee',
-      isActive: true,
-      password: '1234',
-      lastLogin: new Date(),
-      createdAt: new Date('2024-01-01')
-    },
-    {
-      id: '3',
-      code: '9999',
-      name: 'Carlos Admin',
-      role: 'admin',
-      isActive: true,
-      password: 'admin123',
-      lastLogin: new Date(),
-      createdAt: new Date('2024-01-01')
-    }
-  ]);
-
+  // ✅ NUEVO: Usar usuarios del authStore
+  const { users, addUser, updateUser, deleteUser } = useAuthStore();
+  
   const [showForm, setShowForm] = useState(false);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [showPassword, setShowPassword] = useState(false); 
+  const [editingUser, setEditingUser] = useState<any | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<UserFormData>({
     code: '',
     name: '',
-    role: 'employee' as 'employee' | 'admin',
-    password: '', 
+    role: 'employee',
+    password: '',
     isActive: true
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // ✅ Validar código único
+    const codeExists = users.some(u => 
+      u.code === formData.code && (!editingUser || u.id !== editingUser.id)
+    );
+    
+    if (codeExists) {
+      alert('El código de empleado ya existe');
+      return;
+    }
+
     if (editingUser) {
-      setUsers(users.map(user => 
-        user.id === editingUser.id 
-          ? { ...user, ...formData }
-          : user
-      ));
+      // ✅ ACTUALIZAR: Usar función del store
+      updateUser(editingUser.id, formData);
     } else {
-      const newUser: User = {
-        id: Date.now().toString(),
+      // ✅ ACTUALIZAR: Usar función del store
+      addUser({
         ...formData,
-        createdAt: new Date()
-      };
-      setUsers([...users, newUser]);
+      });
     }
 
     resetForm();
@@ -84,7 +57,7 @@ export const UserManagement: React.FC = () => {
       code: '',
       name: '',
       role: 'employee',
-      password: '', 
+      password: '',
       isActive: true
     });
     setShowForm(false);
@@ -92,12 +65,12 @@ export const UserManagement: React.FC = () => {
     setShowPassword(false);
   };
 
-  const handleEdit = (user: User) => {
+  const handleEdit = (user: any) => {
     setFormData({
       code: user.code,
       name: user.name,
       role: user.role,
-      password: user.password, 
+      password: user.password,
       isActive: user.isActive
     });
     setEditingUser(user);
@@ -106,16 +79,17 @@ export const UserManagement: React.FC = () => {
 
   const handleDelete = (userId: string) => {
     if (confirm('¿Estás seguro de eliminar este usuario?')) {
-      setUsers(users.filter(user => user.id !== userId));
+      // ✅ ACTUALIZAR: Usar función del store
+      deleteUser(userId);
     }
   };
 
   const toggleUserStatus = (userId: string) => {
-    setUsers(users.map(user => 
-      user.id === userId 
-        ? { ...user, isActive: !user.isActive }
-        : user
-    ));
+    const user = users.find(u => u.id === userId);
+    if (user) {
+      // ✅ ACTUALIZAR: Usar función del store
+      updateUser(userId, { isActive: !user.isActive });
+    }
   };
 
   const activeUsers = users.filter(u => u.isActive);
@@ -212,7 +186,6 @@ export const UserManagement: React.FC = () => {
                 />
               </div>
 
-              
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Contraseña
@@ -306,9 +279,6 @@ export const UserManagement: React.FC = () => {
                   Rol
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Último Acceso
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Estado
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -325,7 +295,7 @@ export const UserManagement: React.FC = () => {
                         user.role === 'admin' ? 'bg-purple-100' : 'bg-blue-100'
                       }`}>
                         {user.role === 'admin' ? (
-                          <Shield className={`h-5 w-5 ${user.role === 'admin' ? 'text-purple-600' : 'text-blue-600'}`} />
+                          <Shield className="h-5 w-5 text-purple-600" />
                         ) : (
                           <User className="h-5 w-5 text-blue-600" />
                         )}
@@ -333,9 +303,6 @@ export const UserManagement: React.FC = () => {
                       <div className="ml-4">
                         <div className="text-sm font-medium text-gray-900">
                           {user.name}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          Creado: {user.createdAt.toLocaleDateString()}
                         </div>
                       </div>
                     </div>
@@ -351,9 +318,6 @@ export const UserManagement: React.FC = () => {
                     }`}>
                       {user.role === 'admin' ? 'Administrador' : 'Empleado'}
                     </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {user.lastLogin ? user.lastLogin.toLocaleDateString() : 'Nunca'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <button

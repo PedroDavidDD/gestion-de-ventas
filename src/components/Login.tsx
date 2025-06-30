@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LogIn, Monitor, User, Lock, Eye, EyeOff } from 'lucide-react';
+import { LogIn, Monitor, User, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 
 interface LoginProps {
@@ -18,12 +18,12 @@ export const Login: React.FC<LoginProps> = ({ terminalId }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // ✅ Validaciones mejoradas
     if (!employeeCode.trim()) {
       setError('Por favor ingrese su código');
       return;
     }
 
-    //  Validar contraseña
     if (!password.trim()) {
       setError('Por favor ingrese su contraseña');
       return;
@@ -33,23 +33,28 @@ export const Login: React.FC<LoginProps> = ({ terminalId }) => {
     setError('');
 
     try {
-      //  Pasar contraseña al login
       const success = await login(employeeCode, password, terminalId);
       
       if (!success) {
         setError('Código o contraseña inválido');
       }
-    } catch (err) {
-      setError('Error al iniciar sesión');
+    } catch (err: any) {
+      // ✅ Manejo específico de errores
+      if (err.message.includes('inactivo')) {
+        setError('Usuario inactivo. Contacte con administración');
+      } else if (err.message.includes('activo en otro terminal')) {
+        setError('El empleado ya está activo en otro terminal');
+      } else {
+        setError('Error al iniciar sesión');
+      }
     } finally {
       setIsLoading(false);
       setEmployeeCode('');
-      setPassword(''); 
+      setPassword('');
     }
   };
 
   useEffect(() => {
-    //  Enfocar el campo de código al cargar el componente
     const input = document.getElementById('employee-code');
     if (input) {
       input.focus();
@@ -70,7 +75,7 @@ export const Login: React.FC<LoginProps> = ({ terminalId }) => {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label htmlFor="employee-code" className="block text-sm font-medium text-gray-700 mb-2">
-              Código
+              Código de Empleado
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -84,6 +89,7 @@ export const Login: React.FC<LoginProps> = ({ terminalId }) => {
                 className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                 placeholder="Ingresa tu código"
                 disabled={isLoading}
+                autoComplete="username"
               />
             </div>
           </div>
@@ -104,6 +110,7 @@ export const Login: React.FC<LoginProps> = ({ terminalId }) => {
                 className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                 placeholder="Ingresa tu contraseña"
                 disabled={isLoading}
+                autoComplete="current-password"
               />
               <button
                 type="button"
@@ -121,7 +128,8 @@ export const Login: React.FC<LoginProps> = ({ terminalId }) => {
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start space-x-2">
+              <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
               <p className="text-sm text-red-700">{error}</p>
             </div>
           )}

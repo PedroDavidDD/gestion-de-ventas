@@ -6,22 +6,27 @@ interface AuthState {
   currentUser: User | null;
   sessions: Session[];
   isAuthenticated: boolean;
+  users: User[]; // ✅ NUEVO: Usuarios en el estado
   login: (code: string, password: string, terminalId: string) => Promise<boolean>;
   logout: () => void;
   updateLastActivity: () => void;
   checkSessionTimeout: () => void;
   isUserActiveInOtherTerminal: (userId: string, currentTerminalId: string) => boolean;
+  updateUsers: (users: User[]) => void; // ✅ NUEVO: Función para actualizar usuarios
+  addUser: (user: Omit<User, 'id'>) => void; // ✅ NUEVO: Agregar usuario
+  updateUser: (id: string, updates: Partial<User>) => void; // ✅ NUEVO: Actualizar usuario
+  deleteUser: (id: string) => void; // ✅ NUEVO: Eliminar usuario
 }
 
-//  Datos de ejemplo para usuarios
-const mockUsers: User[] = [
+// ✅ Datos iniciales de usuarios (solo para primera carga)
+const initialUsers: User[] = [
   {
     id: '1',
     code: '1001',
     name: 'Juan Pérez',
     role: 'employee',
     isActive: true,
-    password: '1234' // Contraseña simple para demo
+    password: '1234'
   },
   {
     id: '2',
@@ -47,23 +52,30 @@ export const useAuthStore = create<AuthState>()(
       currentUser: null,
       sessions: [],
       isAuthenticated: false,
+      users: initialUsers, // ✅ NUEVO: Usuarios en el estado
 
+      
       login: async (code: string, password: string, terminalId: string): Promise<boolean> => {
-        const user = mockUsers.find(u => u.code === code && u.isActive);
+        const state = get();
+        const user = state.users.find(u => u.code === code);
         
         if (!user) {
           return false;
         }
 
+        // ✅ NUEVO: Validar si el usuario está activo
+        if (!user.isActive) {
+          throw new Error('Usuario inactivo. Contacte con administración');
+        }
+
+        // ✅ Validar contraseña
         if (user.password !== password) {
           return false;
         }
 
-        // verificar si esta activo en otro terminal
-        const state = get();
+        // Verificar si está activo en otro terminal
         if (state.isUserActiveInOtherTerminal(user.id, terminalId)) {
-          alert('El empleado ya está activo en otro terminal');
-          return false;
+          throw new Error('El empleado ya está activo en otro terminal');
         }
 
         // Crear una nueva sesión
@@ -138,6 +150,35 @@ export const useAuthStore = create<AuthState>()(
           s.terminalId !== currentTerminalId && 
           s.isActive
         );
+      },
+
+      // ✅ NUEVO: Funciones para gestionar usuarios
+      updateUsers: (users: User[]) => {
+        set({ users });
+      },
+
+      addUser: (userData) => {
+        const newUser: User = {
+          ...userData,
+          id: Date.now().toString()
+        };
+        set(state => ({
+          users: [...state.users, newUser]
+        }));
+      },
+
+      updateUser: (id: string, updates: Partial<User>) => {
+        set(state => ({
+          users: state.users.map(user => 
+            user.id === id ? { ...user, ...updates } : user
+          )
+        }));
+      },
+
+      deleteUser: (id: string) => {
+        set(state => ({
+          users: state.users.filter(user => user.id !== id)
+        }));
       }
     }),
     {
@@ -145,7 +186,8 @@ export const useAuthStore = create<AuthState>()(
       partialize: (state) => ({
         currentUser: state.currentUser,
         sessions: state.sessions,
-        isAuthenticated: state.isAuthenticated
+        isAuthenticated: state.isAuthenticated,
+        users: state.users // ✅ NUEVO: Persistir usuarios
       })
     }
   )
