@@ -178,7 +178,7 @@ Este manual te guiará paso a paso para probar todas las funcionalidades del Sis
 ### 8.2 Timeout de Sesión
 
 1. Deja la aplicación inactiva por 20 minutos
-2. La sesión se cierra automáticamente
+2. **Verificar:** La sesión se cierra automáticamente
 
 ## 9. Casos de Error a Probar
 
