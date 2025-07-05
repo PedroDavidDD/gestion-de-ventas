@@ -8,13 +8,24 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-  
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "test:components": "jest --testPathPattern=components",
-    "test:utils": "jest --testPathPattern=utils",
-    "test:integration": "jest --testPathPattern=integration"
+    "test:unit": "jest --testPathPatterns=\"unit/.*\\.test\\.ts\" --passWithNoTests",
+    "test:unit:auth": "jest \"src/stores/__tests__/unit/authStore\\.test\\.ts\" --passWithNoTests",
+    "test:unit:cart": "jest \"src/stores/__tests__/unit/cartStore\\.test\\.ts\" --passWithNoTests",
+    "test:unit:product": "jest \"src/stores/__tests__/unit/productStore\\.test\\.ts\" --passWithNoTests",
+    "test:unit:sales": "jest \"src/stores/__tests__/unit/salesStore\\.test\\.ts\" --passWithNoTests",
+    "test:unit:offers": "jest \"src/stores/__tests__/unit/offerStore\\.test\\.ts\" --passWithNoTests",
+    "test:integration": "jest --testPathPatterns=\"integration/.*\\.test\\.ts\" --passWithNoTests",
+    "test:integration:auth-cart": "jest \"src/stores/__tests__/integration/authCart\\.test\\.ts\" --passWithNoTests",
+    "test:integration:cart-offers": "jest \"src/stores/__tests__/integration/cartOffers\\.test\\.ts\" --passWithNoTests",
+    "test:integration:sales-product": "jest \"src/stores/__tests__/integration/salesProduct\\.test\\.ts\" --passWithNoTests",
+    "test:integration:full": "jest \"src/stores/__tests__/integration/fullWorkflow\\.test\\.ts\" --passWithNoTests",
+    "test:e2e": "jest --testPathPatterns=\"e2e/.*\\.test\\.ts\" --passWithNoTests",
+    "test:e2e:login": "jest \"src/stores/__tests__/e2e/loginToSale\\.test\\.ts\" --passWithNoTests",
+    "test:e2e:refund": "jest \"src/stores/__tests__/e2e/refundProcess\\.test\\.ts\" --passWithNoTests",
+    "test:e2e:admin": "jest \"src/stores/__tests__/e2e/adminOperations\\.test\\.ts\" --passWithNoTests"
   },
   "dependencies": {
     "lucide-react": "^0.344.0",
@@ -40,7 +51,9 @@
     "jest-environment-jsdom": "^30.0.4",
     "postcss": "^8.4.35",
     "tailwindcss": "^3.4.1",
-    "typescript": "^5.5.3",
+    "ts-jest": "^29.4.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3",
     "typescript-eslint": "^8.3.0",
     "vite": "^5.4.2"
   }
